@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TaskFlow - Modern Task Manager</title>
+    <title>TaskFlow - Premium Kanban Board</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.5/gsap.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -13,56 +15,64 @@
         }
 
         :root {
-            --primary-blue: #0052CC;
-            --primary-blue-hover: #0065FF;
-            --secondary-blue: #42526E;
+            --primary-blue: #3B82F6;
+            --primary-blue-hover: #60A5FA;
+            --secondary-blue: #64748B;
             --background-primary: #0F1419;
-            --background-secondary: #1A1F2E;
-            --background-tertiary: #22293B;
-            --surface-primary: #FFFFFF;
-            --surface-secondary: #F4F5F7;
-            --surface-hover: #EBECF0;
-            --text-primary: #172B4D;
-            --text-secondary: #42526E;
-            --text-muted: #6B778C;
-            --border-color: #DFE1E6;
-            --shadow-small: 0 1px 3px rgba(0,0,0,0.1);
-            --shadow-medium: 0 4px 12px rgba(0,0,0,0.12);
-            --shadow-large: 0 8px 24px rgba(0,0,0,0.15);
-            --success: #00875A;
-            --warning: #FF8B00;
-            --error: #DE350B;
-            --priority-lowest: #57D9A3;
-            --priority-low: #79E2F2;
-            --priority-medium: #FFC400;
-            --priority-high: #FF8F73;
-            --priority-highest: #FF5630;
-        }
-
-        [data-theme="dark"] {
-            --surface-primary: #22293B;
-            --surface-secondary: #1A1F2E;
-            --surface-hover: #2C3547;
-            --text-primary: #FFFFFF;
-            --text-secondary: #B3BAC5;
-            --text-muted: #8993A4;
-            --border-color: #344563;
+            --background-secondary: #1E293B;
+            --surface-primary: rgba(255, 255, 255, 0.1);
+            --surface-secondary: rgba(255, 255, 255, 0.05);
+            --surface-hover: rgba(255, 255, 255, 0.15);
+            --text-primary: #F8FAFC;
+            --text-secondary: #CBD5E1;
+            --text-muted: #94A3B8;
+            --border-color: rgba(255, 255, 255, 0.2);
+            --shadow-small: 0 2px 8px rgba(0, 0, 0, 0.3);
+            --shadow-medium: 0 6px 16px rgba(0, 0, 0, 0.4);
+            --shadow-large: 0 12px 32px rgba(0, 0, 0, 0.5);
+            --success: #10B981;
+            --warning: #F59E0B;
+            --error: #EF4444;
+            --priority-lowest: #34D399;
+            --priority-low: #6EE7B7;
+            --priority-medium: #FBBF24;
+            --priority-high: #F87171;
+            --priority-highest: #EF4444;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-            background: var(--surface-secondary);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: var(--background-primary);
             color: var(--text-primary);
             line-height: 1.5;
             overflow-x: hidden;
         }
 
-        /* Header */
+        #three-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.5;
+        }
+
+        .glass {
+            background: var(--surface-primary);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-small);
+        }
+
         .header {
             background: var(--surface-primary);
+            backdrop-filter: blur(12px);
             border-bottom: 1px solid var(--border-color);
-            padding: 1rem 2rem;
-            box-shadow: var(--shadow-small);
+            padding: 1.5rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 50;
         }
 
         .header-content {
@@ -77,7 +87,7 @@
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            font-size: 1.5rem;
+            font-size: 1.75rem;
             font-weight: 700;
             color: var(--primary-blue);
         }
@@ -85,48 +95,55 @@
         .header-actions {
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 1.5rem;
         }
 
         .search-bar {
             position: relative;
-            width: 300px;
+            width: 320px;
         }
 
         .search-input {
             width: 100%;
-            padding: 0.5rem 1rem 0.5rem 2.5rem;
+            padding: 0.75rem 1rem 0.75rem 3rem;
             border: 1px solid var(--border-color);
-            border-radius: 6px;
+            border-radius: 8px;
             background: var(--surface-secondary);
             color: var(--text-primary);
-            font-size: 0.875rem;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
         }
 
         .search-icon {
             position: absolute;
-            left: 0.75rem;
+            left: 1rem;
             top: 50%;
             transform: translateY(-50%);
             color: var(--text-muted);
         }
 
         .theme-toggle {
-            background: none;
+            background: var(--surface-secondary);
             border: none;
-            padding: 0.5rem;
-            border-radius: 6px;
+            padding: 0.75rem;
+            border-radius: 8px;
             color: var(--text-secondary);
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
         }
 
         .theme-toggle:hover {
-            background: var(--surface-hover);
-            color: var(--primary-blue);
+            background: var(--primary-blue);
+            color: var(--text-primary);
+            transform: scale(1.05);
         }
 
-        /* Main Content */
         .main-container {
             max-width: 1400px;
             margin: 0 auto;
@@ -141,8 +158,8 @@
         }
 
         .board-title {
-            font-size: 1.75rem;
-            font-weight: 600;
+            font-size: 2rem;
+            font-weight: 700;
             color: var(--text-primary);
         }
 
@@ -152,16 +169,16 @@
         }
 
         .btn {
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
             border: none;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            font-size: 0.875rem;
+            font-size: 0.9rem;
         }
 
         .btn-primary {
@@ -171,12 +188,12 @@
 
         .btn-primary:hover {
             background: var(--primary-blue-hover);
-            transform: translateY(-1px);
+            transform: translateY(-2px);
             box-shadow: var(--shadow-medium);
         }
 
         .btn-secondary {
-            background: var(--surface-primary);
+            background: var(--surface-secondary);
             color: var(--text-secondary);
             border: 1px solid var(--border-color);
         }
@@ -184,9 +201,9 @@
         .btn-secondary:hover {
             background: var(--surface-hover);
             color: var(--text-primary);
+            transform: translateY(-2px);
         }
 
-        /* Board */
         .board {
             display: flex;
             gap: 1.5rem;
@@ -195,17 +212,18 @@
         }
 
         .column {
-            min-width: 320px;
+            min-width: 340px;
             background: var(--surface-primary);
-            border-radius: 8px;
+            border-radius: 12px;
             box-shadow: var(--shadow-small);
             display: flex;
             flex-direction: column;
             max-height: calc(100vh - 200px);
+            backdrop-filter: blur(12px);
         }
 
         .column-header {
-            padding: 1rem 1rem 0.5rem;
+            padding: 1rem 1.5rem;
             border-bottom: 1px solid var(--border-color);
             display: flex;
             justify-content: space-between;
@@ -216,7 +234,7 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            font-size: 0.875rem;
+            font-size: 0.9rem;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -225,7 +243,7 @@
 
         .task-count {
             background: var(--surface-secondary);
-            padding: 0.25rem 0.5rem;
+            padding: 0.25rem 0.75rem;
             border-radius: 12px;
             font-size: 0.75rem;
             color: var(--text-muted);
@@ -234,53 +252,54 @@
         .column-menu {
             background: none;
             border: none;
-            padding: 0.25rem;
-            border-radius: 4px;
+            padding: 0.5rem;
+            border-radius: 6px;
             color: var(--text-muted);
             cursor: pointer;
+            transition: all 0.3s ease;
         }
 
         .column-menu:hover {
             background: var(--surface-hover);
-            color: var(--text-secondary);
+            color: var(--text-primary);
         }
 
         .tasks-container {
-            padding: 1rem;
+            padding: 1.5rem;
             flex: 1;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 0.75rem;
+            gap: 1rem;
         }
 
-        /* Tasks */
         .task {
             background: var(--surface-primary);
             border: 1px solid var(--border-color);
-            border-radius: 6px;
+            border-radius: 8px;
             padding: 1rem;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
             position: relative;
+            backdrop-filter: blur(8px);
         }
 
         .task:hover {
             box-shadow: var(--shadow-medium);
-            transform: translateY(-2px);
+            transform: translateY(-3px);
             border-color: var(--primary-blue);
         }
 
         .task.dragging {
-            opacity: 0.6;
-            transform: rotate(3deg) scale(1.02);
+            opacity: 0.7;
+            transform: rotate(2deg) scale(1.03);
             z-index: 1000;
             box-shadow: var(--shadow-large);
         }
 
         .task-header {
             display: flex;
-            justify-content: between;
+            justify-content: space-between;
             align-items: flex-start;
             margin-bottom: 0.75rem;
         }
@@ -329,7 +348,7 @@
         .priority-indicator {
             width: 16px;
             height: 16px;
-            border-radius: 2px;
+            border-radius: 3px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -345,7 +364,7 @@
             display: flex;
             gap: 0.25rem;
             opacity: 0;
-            transition: opacity 0.2s ease;
+            transition: opacity 0.3s ease;
         }
 
         .task:hover .task-actions {
@@ -355,11 +374,12 @@
         .task-action {
             background: none;
             border: none;
-            padding: 0.25rem;
-            border-radius: 4px;
+            padding: 0.5rem;
+            border-radius: 6px;
             color: var(--text-muted);
             cursor: pointer;
             font-size: 0.875rem;
+            transition: all 0.3s ease;
         }
 
         .task-action:hover {
@@ -368,14 +388,14 @@
         }
 
         .add-task-btn {
-            margin: 0 1rem 1rem;
+            margin: 0 1.5rem 1.5rem;
             padding: 0.75rem;
             background: transparent;
             border: 2px dashed var(--border-color);
-            border-radius: 6px;
+            border-radius: 8px;
             color: var(--text-muted);
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -386,10 +406,10 @@
         .add-task-btn:hover {
             border-color: var(--primary-blue);
             color: var(--primary-blue);
-            background: rgba(0, 82, 204, 0.05);
+            background: var(--surface-hover);
+            transform: scale(1.02);
         }
 
-        /* Modal */
         .modal {
             display: none;
             position: fixed;
@@ -397,11 +417,11 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(9, 30, 66, 0.54);
+            background: rgba(0, 0, 0, 0.6);
             z-index: 10000;
             align-items: center;
             justify-content: center;
-            backdrop-filter: blur(4px);
+            backdrop-filter: blur(6px);
         }
 
         .modal.active {
@@ -410,19 +430,20 @@
 
         .modal-content {
             background: var(--surface-primary);
-            border-radius: 8px;
+            border-radius: 12px;
             width: 90%;
-            max-width: 600px;
+            max-width: 640px;
             max-height: 90vh;
             overflow-y: auto;
             box-shadow: var(--shadow-large);
-            animation: modalSlideIn 0.3s ease;
+            backdrop-filter: blur(12px);
+            animation: modalSlideIn 0.4s ease;
         }
 
         @keyframes modalSlideIn {
             from {
                 opacity: 0;
-                transform: translateY(-20px) scale(0.95);
+                transform: translateY(-30px) scale(0.95);
             }
             to {
                 opacity: 1;
@@ -439,7 +460,7 @@
         }
 
         .modal-title {
-            font-size: 1.25rem;
+            font-size: 1.5rem;
             font-weight: 600;
             color: var(--text-primary);
         }
@@ -448,10 +469,11 @@
             background: none;
             border: none;
             padding: 0.5rem;
-            border-radius: 4px;
+            border-radius: 6px;
             color: var(--text-muted);
             cursor: pointer;
             font-size: 1.25rem;
+            transition: all 0.3s ease;
         }
 
         .modal-close:hover {
@@ -478,27 +500,27 @@
             width: 100%;
             padding: 0.75rem;
             border: 1px solid var(--border-color);
-            border-radius: 6px;
-            background: var(--surface-primary);
+            border-radius: 8px;
+            background: var(--surface-secondary);
             color: var(--text-primary);
-            font-size: 0.875rem;
-            transition: all 0.2s ease;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
         }
 
         .form-input:focus, .form-select:focus, .form-textarea:focus {
             outline: none;
             border-color: var(--primary-blue);
-            box-shadow: 0 0 0 3px rgba(0, 82, 204, 0.1);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
         }
 
         .form-textarea {
             resize: vertical;
-            min-height: 80px;
+            min-height: 100px;
         }
 
         .form-row {
             display: flex;
-            gap: 1rem;
+            gap: 1.5rem;
         }
 
         .form-row .form-group {
@@ -513,75 +535,30 @@
             gap: 1rem;
         }
 
-        /* Drag and Drop */
         .column.drag-over {
-            background: rgba(0, 82, 204, 0.05);
+            background: rgba(59, 130, 246, 0.1);
             border: 2px dashed var(--primary-blue);
         }
 
-        /* Responsive */
         @media (max-width: 768px) {
-            .main-container {
-                padding: 1rem;
-            }
-
-            .board {
-                flex-direction: column;
-            }
-
-            .column {
-                min-width: 100%;
-                max-height: none;
-            }
-
-            .header-content {
-                flex-direction: column;
-                gap: 1rem;
-            }
-
-            .search-bar {
-                width: 100%;
-            }
-
-            .board-header {
-                flex-direction: column;
-                gap: 1rem;
-                align-items: flex-start;
-            }
-
-            .modal-content {
-                margin: 1rem;
-                width: calc(100% - 2rem);
-            }
-
-            .form-row {
-                flex-direction: column;
-            }
+            .main-container { padding: 1rem; }
+            .board { flex-direction: column; }
+            .column { min-width: 100%; max-height: none; }
+            .header-content { flex-direction: column; gap: 1rem; }
+            .search-bar { width: 100%; }
+            .board-header { flex-direction: column; gap: 1rem; align-items: flex-start; }
+            .modal-content { margin: 1rem; width: calc(100% - 2rem); }
+            .form-row { flex-direction: column; }
         }
 
-        /* Dark theme improvements */
-        [data-theme="dark"] .task {
-            background: var(--surface-primary);
-            border-color: var(--border-color);
-        }
-
-        [data-theme="dark"] .task:hover {
-            border-color: var(--primary-blue);
-        }
-
-        [data-theme="dark"] .column {
-            background: var(--surface-primary);
-        }
-
-        /* Status indicators */
-        .status-todo { border-left: 4px solid #DFE1E6; }
+        .status-todo { border-left: 4px solid #CBD5E0; }
         .status-in-progress { border-left: 4px solid var(--primary-blue); }
         .status-done { border-left: 4px solid var(--success); }
     </style>
 </head>
-<body data-theme="light">
-    <!-- Header -->
-    <div class="header">
+<body data-theme="dark">
+    <canvas id="three-canvas"></canvas>
+    <div class="header glass">
         <div class="header-content">
             <div class="logo">
                 <i class="fas fa-tasks"></i>
@@ -598,8 +575,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Main Content -->
     <div class="main-container">
         <div class="board-header">
             <h1 class="board-title">Project Board</h1>
@@ -614,12 +589,11 @@
                 </button>
             </div>
         </div>
-
         <div class="board">
-            <div class="column" data-status="todo">
+            <div class="column glass" data-status="todo">
                 <div class="column-header">
                     <div class="column-title">
-                        <i class="fas fa-circle" style="color: #DFE1E6;"></i>
+                        <i class="fas fa-circle" style="color: #CBD5E0;"></i>
                         TO DO
                         <span class="task-count" id="todo-count">0</span>
                     </div>
@@ -633,8 +607,7 @@
                     Add task
                 </button>
             </div>
-
-            <div class="column" data-status="in-progress">
+            <div class="column glass" data-status="in-progress">
                 <div class="column-header">
                     <div class="column-title">
                         <i class="fas fa-circle" style="color: var(--primary-blue);"></i>
@@ -651,8 +624,7 @@
                     Add task
                 </button>
             </div>
-
-            <div class="column" data-status="done">
+            <div class="column glass" data-status="done">
                 <div class="column-header">
                     <div class="column-title">
                         <i class="fas fa-circle" style="color: var(--success);"></i>
@@ -671,10 +643,8 @@
             </div>
         </div>
     </div>
-
-    <!-- Task Modal -->
     <div id="taskModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content glass">
             <div class="modal-header">
                 <h2 class="modal-title" id="modalTitle">Create Task</h2>
                 <button class="modal-close" id="modalClose">
@@ -687,12 +657,10 @@
                         <label class="form-label" for="taskTitle">Task Title *</label>
                         <input type="text" class="form-input" id="taskTitle" required placeholder="Enter task title...">
                     </div>
-                    
                     <div class="form-group">
                         <label class="form-label" for="taskDescription">Description</label>
                         <textarea class="form-textarea" id="taskDescription" placeholder="Add a description..."></textarea>
                     </div>
-
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label" for="taskType">Task Type</label>
@@ -703,7 +671,6 @@
                                 <option value="epic">Epic</option>
                             </select>
                         </div>
-                        
                         <div class="form-group">
                             <label class="form-label" for="taskPriority">Priority</label>
                             <select class="form-select" id="taskPriority">
@@ -715,13 +682,11 @@
                             </select>
                         </div>
                     </div>
-
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label" for="taskAssignee">Assignee</label>
                             <input type="text" class="form-input" id="taskAssignee" placeholder="Unassigned">
                         </div>
-                        
                         <div class="form-group">
                             <label class="form-label" for="taskStoryPoints">Story Points</label>
                             <select class="form-select" id="taskStoryPoints">
@@ -745,9 +710,56 @@
             </div>
         </div>
     </div>
-
     <script>
-        // Application state
+        function initThreeJS() {
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-canvas'), alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            const particleCount = 800;
+            const particles = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            for (let i = 0; i < particleCount * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * 120;
+                positions[i + 1] = (Math.random() - 0.5) * 120;
+                positions[i + 2] = (Math.random() - 0.5) * 120;
+                colors[i] = 0.2 + Math.random() * 0.3;
+                colors[i + 1] = 0.4 + Math.random() * 0.4;
+                colors[i + 2] = 1.0;
+            }
+            particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            particles.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            const particleMaterial = new THREE.PointsMaterial({
+                size: 0.4,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.5
+            });
+            const particleSystem = new THREE.Points(particles, particleMaterial);
+            scene.add(particleSystem);
+            camera.position.z = 60;
+            function animate() {
+                requestAnimationFrame(animate);
+                particleSystem.rotation.y += 0.0008;
+                particleSystem.rotation.x += 0.0004;
+                renderer.render(scene, camera);
+            }
+            animate();
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+
+        function initGSAP() {
+            gsap.from('.header', { y: -100, opacity: 0, duration: 1, ease: 'power3.out' });
+            gsap.from('.board-title', { opacity: 0, y: 50, duration: 1, delay: 0.2, ease: 'power3.out' });
+            gsap.from('.column', { opacity: 0, y: 50, duration: 1, delay: 0.4, stagger: 0.2, ease: 'power3.out' });
+        }
+
         let tasks = {
             todo: [],
             'in-progress': [],
@@ -756,7 +768,6 @@
         let currentTask = null;
         let taskIdCounter = 1000;
 
-        // DOM elements
         const elements = {
             todoTasks: document.getElementById('todo-tasks'),
             inProgressTasks: document.getElementById('in-progress-tasks'),
@@ -779,57 +790,75 @@
             saveButtonText: document.getElementById('saveButtonText')
         };
 
-        // Initialize application
         function init() {
+            initThreeJS();
+            initGSAP();
             loadTasks();
             setupEventListeners();
             renderTasks();
             updateTaskCounts();
         }
 
-        // Setup event listeners
         function setupEventListeners() {
-            // Theme toggle
-            elements.themeToggle.addEventListener('click', toggleTheme);
-
-            // Create task button
-            elements.createTaskBtn.addEventListener('click', () => openModal('todo'));
-
-            // Add task buttons
-            elements.addTaskButtons.forEach(btn => {
-                btn.addEventListener('click', () => openModal(btn.dataset.status));
-            });
-
-            // Modal events
-            elements.modalClose.addEventListener('click', closeModal);
-            elements.cancelBtn.addEventListener('click', closeModal);
-            elements.taskForm.addEventListener('submit', handleFormSubmit);
-
-            // Search functionality
-            elements.searchInput.addEventListener('input', handleSearch);
-
-            // Drag and drop
+            if (elements.themeToggle) {
+                elements.themeToggle.addEventListener('click', toggleTheme);
+            } else {
+                console.warn('themeToggle element not found');
+            }
+            if (elements.createTaskBtn) {
+                elements.createTaskBtn.addEventListener('click', () => openModal('todo'));
+            } else {
+                console.warn('createTaskBtn element not found');
+            }
+            if (elements.addTaskButtons) {
+                elements.addTaskButtons.forEach(btn => {
+                    btn.addEventListener('click', () => openModal(btn.dataset.status));
+                });
+            } else {
+                console.warn('addTaskButtons not found');
+            }
+            if (elements.modalClose) {
+                elements.modalClose.addEventListener('click', closeModal);
+            } else {
+                console.warn('modalClose element not found');
+            }
+            if (elements.cancelBtn) {
+                elements.cancelBtn.addEventListener('click', closeModal);
+            } else {
+                console.warn('cancelBtn element not found');
+            }
+            if (elements.taskForm) {
+                elements.taskForm.addEventListener('submit', handleFormSubmit);
+            } else {
+                console.warn('taskForm element not found');
+            }
+            if (elements.searchInput) {
+                elements.searchInput.addEventListener('input', handleSearch);
+            } else {
+                console.warn('searchInput element not found');
+            }
+            if (elements.taskModal) {
+                elements.taskModal.addEventListener('click', (e) => {
+                    if (e.target === elements.taskModal) {
+                        closeModal();
+                    }
+                });
+            } else {
+                console.warn('taskModal element not found');
+            }
             setupDragAndDrop();
-
-            // Click outside modal to close
-            elements.taskModal.addEventListener('click', (e) => {
-                if (e.target === elements.taskModal) {
-                    closeModal();
-                }
-            });
         }
 
-        // Theme toggle
         function toggleTheme() {
             const currentTheme = document.body.dataset.theme;
             const newTheme = currentTheme === 'light' ? 'dark' : 'light';
             document.body.dataset.theme = newTheme;
-            
-            const icon = elements.themeToggle.querySelector('i');
-            icon.className = newTheme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
+            const icon = elements.themeToggle?.querySelector('i');
+            if (icon) {
+                icon.className = newTheme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
+            }
         }
 
-        // Setup drag and drop
         function setupDragAndDrop() {
             document.querySelectorAll('.column').forEach(column => {
                 column.addEventListener('dragover', handleDragOver);
@@ -858,19 +887,14 @@
             e.preventDefault();
             const column = e.currentTarget;
             column.classList.remove('drag-over');
-            
             const taskId = parseInt(e.dataTransfer.getData('text/plain'));
             const newStatus = column.dataset.status;
-            
             moveTask(taskId, newStatus);
         }
 
-        // Move task between columns
         function moveTask(taskId, newStatus) {
             let task = null;
             let oldStatus = null;
-
-            // Find the task
             Object.keys(tasks).forEach(status => {
                 const foundTask = tasks[status].find(t => t.id === taskId);
                 if (foundTask) {
@@ -878,114 +902,106 @@
                     oldStatus = status;
                 }
             });
-
             if (task && oldStatus !== newStatus) {
-                // Remove from old status
                 tasks[oldStatus] = tasks[oldStatus].filter(t => t.id !== taskId);
-                
-                // Add to new status
                 task.status = newStatus;
                 tasks[newStatus].push(task);
-                
                 saveTasks();
                 renderTasks();
                 updateTaskCounts();
             }
         }
 
-        // Open modal
         function openModal(status, task = null) {
             currentTask = task ? { ...task, status } : { id: ++taskIdCounter, status };
-            
-            elements.modalTitle.textContent = task ? 'Edit Task' : 'Create Task';
-            elements.saveButtonText.textContent = task ? 'Update Task' : 'Create Task';
-            
+            if (elements.modalTitle) elements.modalTitle.textContent = task ? 'Edit Task' : 'Create Task';
+            if (elements.saveButtonText) elements.saveButtonText.textContent = task ? 'Update Task' : 'Create Task';
             if (task) {
-                elements.taskTitle.value = task.title;
-                elements.taskDescription.value = task.description || '';
-                elements.taskType.value = task.type || 'story';
-                elements.taskPriority.value = task.priority || 'medium';
-                elements.taskAssignee.value = task.assignee || '';
-                elements.taskStoryPoints.value = task.storyPoints || '';
-            } else {
+                if (elements.taskTitle) elements.taskTitle.value = task.title;
+                if (elements.taskDescription) elements.taskDescription.value = task.description || '';
+                if (elements.taskType) elements.taskType.value = task.type || 'story';
+                if (elements.taskPriority) elements.taskPriority.value = task.priority || 'medium';
+                if (elements.taskAssignee) elements.taskAssignee.value = task.assignee || '';
+                if (elements.taskStoryPoints) elements.taskStoryPoints.value = task.storyPoints || '';
+            } else if (elements.taskForm) {
                 elements.taskForm.reset();
-                elements.taskType.value = 'story';
-                elements.taskPriority.value = 'medium';
+                if (elements.taskType) elements.taskType.value = 'story';
+                if (elements.taskPriority) elements.taskPriority.value = 'medium';
             }
-            
-            elements.taskModal.classList.add('active');
-            elements.taskTitle.focus();
+            if (elements.taskModal) {
+                elements.taskModal.classList.add('active');
+                if (elements.taskTitle) elements.taskTitle.focus();
+                gsap.from('.modal-content', { opacity: 0, y: 50, duration: 0.5, ease: 'power3.out' });
+            }
         }
 
-        // Close modal
         function closeModal() {
-            elements.taskModal.classList.remove('active');
-            elements.taskForm.reset();
-            currentTask = null;
+            if (elements.taskModal) {
+                gsap.to('.modal-content', {
+                    opacity: 0,
+                    y: 50,
+                    duration: 0.3,
+                    ease: 'power3.in',
+                    onComplete: () => {
+                        elements.taskModal.classList.remove('active');
+                        if (elements.taskForm) elements.taskForm.reset();
+                        currentTask = null;
+                    }
+                });
+            }
         }
 
-        // Handle form submission
         function handleFormSubmit(e) {
             e.preventDefault();
-            
             const task = {
                 id: currentTask.id,
-                title: elements.taskTitle.value.trim(),
-                description: elements.taskDescription.value.trim(),
-                type: elements.taskType.value,
-                priority: elements.taskPriority.value,
-                assignee: elements.taskAssignee.value.trim(),
-                storyPoints: elements.taskStoryPoints.value,
+                title: elements.taskTitle?.value.trim(),
+                description: elements.taskDescription?.value.trim(),
+                type: elements.taskType?.value,
+                priority: elements.taskPriority?.value,
+                assignee: elements.taskAssignee?.value.trim(),
+                storyPoints: elements.taskStoryPoints?.value,
                 status: currentTask.status,
                 createdAt: currentTask.createdAt || new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             };
-
             if (!task.title) {
                 alert('Please enter a task title');
                 return;
             }
-
-            // Check if we're editing or creating
             const existingTaskIndex = tasks[task.status].findIndex(t => t.id === task.id);
-            
             if (existingTaskIndex >= 0) {
-                // Update existing task
                 tasks[task.status][existingTaskIndex] = task;
             } else {
-                // Create new task
                 tasks[task.status].push(task);
             }
-
             saveTasks();
             renderTasks();
             updateTaskCounts();
             closeModal();
         }
 
-        // Render tasks
         function renderTasks() {
             Object.keys(tasks).forEach(status => {
                 const container = document.getElementById(`${status}-tasks`);
-                container.innerHTML = '';
-                
-                tasks[status].forEach(task => {
-                    const taskElement = createTaskElement(task);
-                    container.appendChild(taskElement);
-                });
+                if (container) {
+                    container.innerHTML = '';
+                    tasks[status].forEach(task => {
+                        const taskElement = createTaskElement(task);
+                        container.appendChild(taskElement);
+                        gsap.from(taskElement, { opacity: 0, y: 20, duration: 0.5, ease: 'power3.out' });
+                    });
+                }
             });
         }
 
-        // Create task element
         function createTaskElement(task) {
             const taskDiv = document.createElement('div');
             taskDiv.className = `task status-${task.status}`;
             taskDiv.draggable = true;
             taskDiv.dataset.taskId = task.id;
-
             const typeIcon = getTypeIcon(task.type);
             const priorityClass = `priority-${task.priority}`;
-
             taskDiv.innerHTML = `
                 <div class="task-type">
                     <i class="${typeIcon}"></i>
@@ -1009,21 +1025,16 @@
                     </div>
                 </div>
             `;
-
-            // Add drag events
             taskDiv.addEventListener('dragstart', (e) => {
                 e.dataTransfer.setData('text/plain', task.id);
                 taskDiv.classList.add('dragging');
             });
-
             taskDiv.addEventListener('dragend', () => {
                 taskDiv.classList.remove('dragging');
             });
-
             return taskDiv;
         }
 
-        // Get type icon
         function getTypeIcon(type) {
             const icons = {
                 story: 'fas fa-bookmark',
@@ -1034,7 +1045,6 @@
             return icons[type] || 'fas fa-circle';
         }
 
-        // Edit task
         function editTask(taskId, status) {
             const task = tasks[status].find(t => t.id === taskId);
             if (task) {
@@ -1042,7 +1052,6 @@
             }
         }
 
-        // Delete task
         function deleteTask(taskId, status) {
             if (confirm('Are you sure you want to delete this task?')) {
                 tasks[status] = tasks[status].filter(t => t.id !== taskId);
@@ -1052,37 +1061,36 @@
             }
         }
 
-        // Update task counts
         function updateTaskCounts() {
-            document.getElementById('todo-count').textContent = tasks.todo.length;
-            document.getElementById('in-progress-count').textContent = tasks['in-progress'].length;
-            document.getElementById('done-count').textContent = tasks.done.length;
+            if (document.getElementById('todo-count')) {
+                document.getElementById('todo-count').textContent = tasks.todo.length;
+            }
+            if (document.getElementById('in-progress-count')) {
+                document.getElementById('in-progress-count').textContent = tasks['in-progress'].length;
+            }
+            if (document.getElementById('done-count')) {
+                document.getElementById('done-count').textContent = tasks.done.length;
+            }
         }
 
-        // Search functionality
         function handleSearch() {
+            if (!elements.searchInput) return;
             const query = elements.searchInput.value.toLowerCase();
             const allTasks = document.querySelectorAll('.task');
-            
             allTasks.forEach(taskElement => {
-                const title = taskElement.querySelector('.task-title').textContent.toLowerCase();
+                const title = taskElement.querySelector('.task-title')?.textContent.toLowerCase() || '';
                 const description = taskElement.querySelector('.task-description')?.textContent.toLowerCase() || '';
-                const taskId = taskElement.querySelector('.task-id').textContent.toLowerCase();
-                
+                const taskId = taskElement.querySelector('.task-id')?.textContent.toLowerCase() || '';
                 const matches = title.includes(query) || description.includes(query) || taskId.includes(query);
                 taskElement.style.display = matches || !query ? 'block' : 'none';
             });
         }
 
-        // Save tasks to memory
         function saveTasks() {
             // In a real application, this would save to a backend or localStorage
-            // For this demo, we're just keeping everything in memory
         }
 
-        // Load tasks from memory
         function loadTasks() {
-            // Initialize with some sample tasks
             if (Object.values(tasks).every(arr => arr.length === 0)) {
                 tasks.todo = [
                     {
@@ -1108,7 +1116,6 @@
                         createdAt: new Date().toISOString()
                     }
                 ];
-
                 tasks['in-progress'] = [
                     {
                         id: taskIdCounter++,
@@ -1122,7 +1129,6 @@
                         createdAt: new Date().toISOString()
                     }
                 ];
-
                 tasks.done = [
                     {
                         id: taskIdCounter++,
@@ -1139,15 +1145,14 @@
             }
         }
 
-        // Utility function to escape HTML
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
 
-        // Initialize the application
-        init();
+        // Initialize after DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
